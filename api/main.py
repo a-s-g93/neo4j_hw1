@@ -3,7 +3,6 @@ from datetime import timedelta
 from flask_bootstrap import Bootstrap
 from forms import inputForm
 from comm import commDAO
-import os
 from flask_jwt_extended import JWTManager
 from drivers import init_driver
 
@@ -24,19 +23,15 @@ NEO4J_PASSWORD = 'sip-rocks-make'
 JWT_SECRET = 'secret'
 SALT_ROUNDS = 10
 
-app.config.from_mapping(
-    NEO4J_URI=NEO4J_URI,
-    NEO4J_USERNAME=NEO4J_USERNAME,
-    NEO4J_PASSWORD=NEO4J_PASSWORD,
-    # NEO4J_DATABASE=os.getenv('NEO4J_DATABASE'),
-    JWT_SECRET_KEY=JWT_SECRET,
-    JWT_AUTH_HEADER_PREFIX="Bearer",
-    JWT_VERIFY_CLAIMS="signature",
-    JWT_EXPIRATION_DELTA=timedelta(360),
-    SECRET_KEY="secret")
+app.config.from_mapping(NEO4J_URI=NEO4J_URI,
+                        NEO4J_USERNAME=NEO4J_USERNAME,
+                        NEO4J_PASSWORD=NEO4J_PASSWORD,
+                        JWT_SECRET_KEY=JWT_SECRET,
+                        JWT_AUTH_HEADER_PREFIX="Bearer",
+                        JWT_VERIFY_CLAIMS="signature",
+                        JWT_EXPIRATION_DELTA=timedelta(360),
+                        SECRET_KEY="secret")
 
-# print(os.environ)
-# print("test: ", os.getenv('NEO4J_USERNAME'))
 with app.app_context():
     init_driver(
         app.config['NEO4J_URI'],
@@ -50,7 +45,7 @@ def index():
     """ this is the main page
     """
     dao = commDAO(current_app.driver, current_app.config.get('SECRET_KEY'))
-    header = "Neo4j HW 1 Assignment"
+    header = "Add New Employee"
     message = ""
 
     form = inputForm()
@@ -61,10 +56,17 @@ def index():
     if request.method == 'POST':
         # push data to client
         try:
-            name = form.employee_name.data.capitalize().strip()
-            new_employee = dao.register(name, form.employee_id.data)
-            message = "{name} successfully added to database".format(
-                form.employee_name.data)
+            # format name correctly
+            name_temp = form.employee_name.data.split()
+            name = " ".join([
+                n.capitalize().strip() for n in name_temp
+                if type(name_temp) is not str
+            ])
+
+            print("name: ", name)
+            new_employee = dao.register(name=name, id=form.employee_id.data)
+            print("new employee: ", new_employee)
+            message = "{name} successfully added to database".format(name=name)
             employees = dao.view_employees()
         except Exception as e:
             print("error: ", e)
@@ -79,6 +81,3 @@ def index():
 
 if __name__ == "__main__":
     app.run(threaded=True, host="127.0.0.1", port=8080, debug=True)
-# test
-# dao = commDAO(current_app.driver, current_app.config.get('SECRET_KEY'))
-# dao.register("John Doe")
